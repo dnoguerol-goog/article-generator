@@ -182,7 +182,7 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 ### TOPIC: Deploy create-article-object service to ASM
 
 #### Requirements
-- A working analyze-article-text service from the previous section
+- A working `analyze-article-text` service from the previous section
 - A GCS bucket
 
 #### Steps
@@ -203,11 +203,11 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
         service/create-article-object-service created
         deployment.apps/create-article-object-deployment created
 
-### TOPIC: Deploy create-article-object service to ASM
+### TOPIC: Submit article text to ASM deployed services
 
 #### Requirements
-- A working analyze-article-text service from the previous section
-- A working create-article-object service from the previous section
+- A working `analyze-article-text` service from the previous section
+- A working `create-article-object` service from the previous section
 
 #### Steps
 1. Get the EXTERNAL-IP of the ingress gateway:
@@ -244,7 +244,7 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 ### TOPIC: Show fault injection in analyze-article-text service
 
 #### Requirements
-- Successful deployment of analyze-article-text service
+- Successful deployment of `analyze-article-text` service
 
 #### Steps
 1. Edit the `k8s/istio/analyze-article-text.yaml` file to change the `fault.abort.percentage.value` to `50` and the `fault.delay.percentage.value` to `50`. Save the file.
@@ -300,8 +300,8 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
     **Authentication:** Require authentication  
     **Additional trigger:**  
         Cloud Pub/Sub topic  
-        "demo" service account  
-        /events URL path  
+        Your GCS service account  
+        `/events` URL path  
 
 2. After service is created, click topic name on the triggers tab and then copy the topic name in the “Topic Details” screen. Be sure to remove the ``/projects/$PROJECT/topics`` prefix.
 
