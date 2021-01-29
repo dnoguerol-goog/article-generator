@@ -5,13 +5,13 @@ This is a simple demo that takes a snippet of article text, generates some metad
 
 It is comprised of two microservices: `analyze-article-text` and `create-article-object`.
 
-The goal of the demo is to facilitate demonstration a number of capabilities:
+The goal of the demo is to facilitate demonstration of a number of capabilities:
 
 1. Two containerized microservices written in different languages that can be deployed to [Anthos Service Mesh](https://cloud.google.com/anthos/service-mesh) (ASM) or [Cloud Run](https://cloud.google.com/run).
 1. Demonstrate interaction between microservices as either synchronous HTTP or asynchronous Pub/Sub.
-1. Demonstrate traffic shaping, blue-green deployments, etc.
+1. Demonstrate traffic shaping to support blue-green deployments, canaries, etc.
 1. For ASM deployment, demonstrate fault injection and multiple service versions.
-1. For Cloud Run deployment, demonstrate [Events for Cloud Run](https://cloud.google.com/run/docs/quickstarts/events).
+1. For Cloud Run deployment, demonstrate [Events for Cloud Run](https://cloud.google.com/run/docs/quickstarts/events) and multiple service revisions.
 1. Demonstrate distributed tracing between the two microservices.
 
 ## Caveat
@@ -240,7 +240,7 @@ _NOTE: This is not necessary as the out-of-the-box K8s manifests will pull conta
 
 ### TOPIC: Show Cloud Logging and Cloud Trace
 
-1. Go into Cloud Logging and show the log messages for the services. An example filter:
+1. Go into Cloud Logging and show the log messages for the services. An example filter (replacing $PROJECT_NAME and $CLUSTER_NAME appropriately):
 
         resource.labels.project_id="$PROJECT_NAME"
         resource.labels.cluster_name="$CLUSTER_NAME"
@@ -309,11 +309,20 @@ From the `analyze-article-text` directory:
 ### TOPIC: Deploy services to Cloud Run
 
 #### Steps
-1. Create the `create-article-object` service to Cloud Run:
+1. Download the container images locally and upload to Container Registry:
+
+        docker pull googldan/create-article-object:0.0.1
+        docker pull googldan/analyze-article-text:0.0.1
+        docker pull googldan/analyze-article-text:0.0.2
+        docker tag googldan/create-article-object:0.0.1 eu.gcr.io/$PROJECT/create-article-object:0.0.1
+        docker tag googldan/analyze-article-text:0.0.1 eu.gcr.io/$PROJECT/analyze-article-text:0.0.1
+        docker tag googldan/analyze-article-text:0.0.2 eu.gcr.io/$PROJECT/analyze-article-text:0.0.2
+
+2. Create the `create-article-object` service to Cloud Run:
 
     **Deployment platform:** Cloud Run (fully managed), region _europe-west4_  
     **Service name:** create-article-object  
-    **Container image URL:** Your create-article-object container image (0.0.1 version)  
+    **Container image URL:** `eu.gcr.io/$PROJECT/create-article-object:0.0.1`
     **Advanced Settings/General/Service account:** Your GCS service account  
     **Advanced Settings/Variables:** Create PROJECT variable with a value of your GCP project  
     **Advanced Settings/Variables:** Create BUCKET variable with a value of your GCS bucket (e.g. dn-text-entities)  
@@ -324,26 +333,26 @@ From the `analyze-article-text` directory:
         Your GCS service account  
         `/events` URL path  
 
-2. After service is created, click topic name on the triggers tab and then copy the topic name in the “Topic Details” screen. Be sure to remove the ``/projects/$PROJECT/topics`` prefix.
+3. After service is created, click topic name on the triggers tab and then copy the topic name in the “Topic Details” screen. Be sure to remove the ``/projects/$PROJECT/topics`` prefix.
 
-3. Create the `analyze-article-text` service to Cloud Run:
+4. Create the `analyze-article-text` service to Cloud Run:
 
     **Deployment platform:** Cloud Run (fully managed), region _europe-west4_  
     **Service name:** analyze-article-text  
-    **Container image URL:** Your analyze-article-text container image (0.0.1 version)  
+    **Container image URL:** `eu.gcr.io/$PROJECT/analyze-article-text:0.0.1`
     **Advanced Settings/General/Service account:** Your GCS service account  
     **Advanced Settings/Variables:** Create PROJECT variable with a value of your GCP project  
     **Advanced Settings/Variables:** Create TOPIC variable with a value that was copied from step 2.  
     **Ingress:** Allow all traffic  
     **Authentication:** Require authentication
 
-4. When the service is finished deploying, copy the URL that is generated for the service.
+5. When the service is finished deploying, copy the URL that is generated for the service.
 
-5. Post an article:
+6. Post an article:
 
         curl -v -H "Authorization: Bearer $(gcloud auth print-identity-token)" -d 'This is a test article.' $SERVICE_URL/publish
 
-6. Verify that the HTML file appears in the GCS bucket.
+7. Verify that the HTML file appears in the GCS bucket.
 
 ### TOPIC: Deploy analyze-article-text v2 to Cloud Run
 
@@ -355,7 +364,7 @@ From the `analyze-article-text` directory:
 
 2. Click the **EDIT & DEPLOY NEW REVISION** button.
 
-3. For Container image URL, select the `analyze-article-text` container image 0.0.2.
+3. For Container image URL, use `eu.gcr.io/$PROJECT/analyze-article-text:0.0.2`.
 
 4. Scroll down and uncheck the checkbox labeled "Service this revision immediately".
 
