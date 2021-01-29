@@ -309,7 +309,7 @@ From the `analyze-article-text` directory:
 ### TOPIC: Deploy services to Cloud Run
 
 #### Steps
-1. Download the container images locally and upload to Container Registry:
+1. Download the container images locally and upload to Container Registry (replacing $PROJECT with your GCP project):
 
         docker pull googldan/create-article-object:0.0.1
         docker pull googldan/analyze-article-text:0.0.1
@@ -322,7 +322,7 @@ From the `analyze-article-text` directory:
 
     **Deployment platform:** Cloud Run (fully managed), region _europe-west4_  
     **Service name:** create-article-object  
-    **Container image URL:** `eu.gcr.io/$PROJECT/create-article-object:0.0.1`
+    **Container image URL:** `eu.gcr.io/$PROJECT/create-article-object:0.0.1`  
     **Advanced Settings/General/Service account:** Your GCS service account  
     **Advanced Settings/Variables:** Create PROJECT variable with a value of your GCP project  
     **Advanced Settings/Variables:** Create BUCKET variable with a value of your GCS bucket (e.g. dn-text-entities)  
@@ -339,7 +339,7 @@ From the `analyze-article-text` directory:
 
     **Deployment platform:** Cloud Run (fully managed), region _europe-west4_  
     **Service name:** analyze-article-text  
-    **Container image URL:** `eu.gcr.io/$PROJECT/analyze-article-text:0.0.1`
+    **Container image URL:** `eu.gcr.io/$PROJECT/analyze-article-text:0.0.1`  
     **Advanced Settings/General/Service account:** Your GCS service account  
     **Advanced Settings/Variables:** Create PROJECT variable with a value of your GCP project  
     **Advanced Settings/Variables:** Create TOPIC variable with a value that was copied from step 2.  
