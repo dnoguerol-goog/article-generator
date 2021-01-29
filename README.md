@@ -10,7 +10,7 @@ The goal of the demo is to facilitate demonstration a number of capabilities:
 1. Two containerized microservices written in different languages that can be deployed to [Anthos Service Mesh](https://cloud.google.com/anthos/service-mesh) (ASM) or [Cloud Run](https://cloud.google.com/run).
 1. Demonstrate interaction between microservices as either synchronous HTTP or asynchronous Pub/Sub.
 1. Demonstrate traffic shaping, blue-green deployments, etc.
-1. For ASM deployment, demonstrate fault injection.
+1. For ASM deployment, demonstrate fault injection and multiple service versions.
 1. For Cloud Run deployment, demonstrate [Events for Cloud Run](https://cloud.google.com/run/docs/quickstarts/events).
 1. Demonstrate distributed tracing between the two microservices.
 
@@ -101,9 +101,11 @@ This endpoint is helpful for testing, showing traffic shaping and deployment upd
 
 The service creates custom spans using OpenTracing to demonstrate distributed tracing. These will automatically be sent to Cloud Trace.
 
-## Demo Topics
+## Demonstration Topics
 
 ### TOPIC: Building the container images with Cloud Build
+
+_NOTE: This is not necessary as the out-of-the-box K8s manifests will pull containers from Docker Hub._
 
 #### Requirements
 - Both the `analyze-article-text` and `create-article-object` directories have been added as separate GCP Cloud Source Repositories repos.
@@ -131,7 +133,7 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 #### Requirements
 - A GKE cluster that has [Anthos Service Mesh](https://cloud.google.com/service-mesh/docs/install) installed and [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) enabled.
 - A command-line with `kubectl` configured to talk to the cluster.
-- A GCP IAM service account that has the TODO appropriate roles.
+- A GCP IAM service account that has the appropriate roles (TODO: define).
 
 #### Steps
 1. Create a new namespace for the services:
@@ -183,16 +185,16 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 
 #### Requirements
 - A working `analyze-article-text` service from the previous section
-- A GCS bucket
+- A GCS bucket that will store the generated HTML files
 
 #### Steps
 1. In the `create-article-object` directory, update the `k8s/istio/create-article-object.yaml` file with the following: 
 
-   a. The `Deployment` object's container image (around line 36) is set to the appropriate container registry URL.
+   a. Set the value of the `Deployment` object's container image (around line 36) is set to the appropriate container registry URL.
    
-   b. The `Deployment` object's PROJECT environment variable to your GCP project.
+   b. Set the value of the `Deployment` object's PROJECT environment variable to your GCP project.
    
-   c. The `Deployment` object's BUCKET environment variable to your GCS bucket (see requirements).
+   c. Set the value of the `Deployment` object's BUCKET environment variable to your GCS bucket (see requirements).
 
 2. From the `create-article-object` directory, deploy the service:
 
@@ -220,26 +222,32 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 
 3. Check the GCS bucket for the new HTML file.
 
-### TOPIC: Show ASM Topology, Cloud Logging and Cloud Trace
+### TOPIC: Show additional ASM details
 
 #### Requirements
 - Successful generation of an HTML article from the previous step
 
 #### Steps
-1. Go into ASM and show details for each service.
+1. Run some load on the `analyze-article-text` service:
 
-2. Note the ability to create SLOs and alerts for services.
+        kubectl run httperf --rm -it --image=dos65/httperf -- httperf --server EXTERNAL_IP --uri /version --rate 50 --timeout 5 --num-conn=5000
 
-3. Show the ASM topology tab.
+2. Go into ASM and show details for each service.
 
-4. Go into Cloud Logging and show the log messages for the services. An example filter:
+3. Note the ability to create SLOs and alerts for services.
+
+4. Show the ASM topology tab.
+
+### TOPIC: Show Cloud Logging and Cloud Trace
+
+1. Go into Cloud Logging and show the log messages for the services. An example filter:
 
         resource.labels.project_id="$PROJECT_NAME"
-        resource.labels.cluster_name="cluster-1"
+        resource.labels.cluster_name="$CLUSTER_NAME"
         resource.type="k8s_container"
         resource.labels.namespace_name="demo"
 
-5. Go into Cloud Trace and note the latest invocation and the correlation of the spans across services.
+2. Go into Cloud Trace and note the latest invocation and the correlation of the spans across services.
 
 ### TOPIC: Show fault injection in analyze-article-text service
 
@@ -247,15 +255,17 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 - Successful deployment of `analyze-article-text` service
 
 #### Steps
-1. Edit the `k8s/istio/analyze-article-text.yaml` file to change the `fault.abort.percentage.value` to `50` and the `fault.delay.percentage.value` to `50`. Save the file.
+1. Edit the `k8s/istio/analyze-article-text.yaml` file to change the `fault.abort.percentage.value` to `50` and the `fault.delay.percentage.value` to `100`. Save the file.
 
 2. Update the deployment:
 
         kubectl -n demo apply -f k8s/istio/analyze-article-text.yaml
 
-3. Call the service's `/version` endpoint to show the injected fault behavior:
+3. Call the service's `/version` endpoint to observe the injected fault behavior:
 
         curl -v http://EXTERNAL-IP/version
+
+Note that the response takes 2 seconds and returns an HTTP 503 error roughly half the time.
 
 ### TOPIC: Deploy a second version of analyze-article-text service to ASM
 
@@ -263,9 +273,20 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 - Successful deployment of `analyze-article-text` service
 
 #### Steps
+
+From the `analyze-article-text` directory:
+
 1. If fault injection was demonstrated, edit the `k8s/istio/analyze-article-text.yaml` file to change the `fault.abort.percentage.value` to `0` and the `fault.delay.percentage.value` to `0`. Save the file and update the deployment:
 
         kubectl -n demo apply -f k8s/istio/analyze-article-text.yaml
+
+2. Edit the `k8s/istio/analyze-article-text-v2.yaml` file with the following: 
+
+   a. Set the value of the `Deployment` object's container image (around line 23) is set to the appropriate container registry URL.
+   
+   b. Set the value of the `Deployment` object's PROJECT environment variable to your GCP project.
+   
+   c. Set the value of the `Deployment` object's BUCKET environment variable to your GCS bucket (see requirements).
 
 2. Deploy the new version of the service:
 
@@ -275,7 +296,7 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 
         curl -v http://EXTERNAL-IP/version
 
-4. Edit the `k8s/istio/analyze-article-text.yaml` file and change the weighting of v1 to 50 and the weighting of v2 to 50.
+4. Edit the `k8s/istio/analyze-article-text.yaml` file and change the weight of v1 to `50` and the weighting of v2 to `50`.
 
 5. Apply the changes:
 
@@ -285,14 +306,14 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 
         curl -v http://EXTERNAL-IP/version
 
-### TOPIC: Deploy service to Cloud Run
+### TOPIC: Deploy services to Cloud Run
 
 #### Steps
 1. Create the `create-article-object` service to Cloud Run:
 
     **Deployment platform:** Cloud Run (fully managed), region _europe-west4_  
     **Service name:** create-article-object  
-    **Container image URL:** Your container image (0.0.1 version)  
+    **Container image URL:** Your create-article-object container image (0.0.1 version)  
     **Advanced Settings/General/Service account:** Your GCS service account  
     **Advanced Settings/Variables:** Create PROJECT variable with a value of your GCP project  
     **Advanced Settings/Variables:** Create BUCKET variable with a value of your GCS bucket (e.g. dn-text-entities)  
@@ -309,7 +330,7 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 
     **Deployment platform:** Cloud Run (fully managed), region _europe-west4_  
     **Service name:** analyze-article-text  
-    **Container image URL:** Your container image (0.0.1 version)  
+    **Container image URL:** Your analyze-article-text container image (0.0.1 version)  
     **Advanced Settings/General/Service account:** Your GCS service account  
     **Advanced Settings/Variables:** Create PROJECT variable with a value of your GCP project  
     **Advanced Settings/Variables:** Create TOPIC variable with a value that was copied from step 2.  
@@ -324,6 +345,30 @@ The service creates custom spans using OpenTracing to demonstrate distributed tr
 
 6. Verify that the HTML file appears in the GCS bucket.
 
-### TOPIC: Deploy service v2 to Cloud Run
+### TOPIC: Deploy analyze-article-text v2 to Cloud Run
 
-TODO
+#### Requirements
+- Successful deployment of `analyze-article-text` v1 service to Cloud Run
+
+#### Steps
+1. From Cloud Run, click into the existing `analyze-article-text` service.
+
+2. Click the **EDIT & DEPLOY NEW REVISION** button.
+
+3. For Container image URL, select the `analyze-article-text` container image 0.0.2.
+
+4. Scroll down and uncheck the checkbox labeled "Service this revision immediately".
+
+5. Click the **DEPLOY** button.
+
+6. Note the second revision is created with 0% traffic.
+
+7. Show that traffic is still going only to 0.0.1:
+
+        curl -v -H "Authorization: Bearer $(gcloud auth print-identity-token)" $SERVICE_URL/version
+
+8. Click the overflow menu icon next to the new revision and click "Manage Traffic". Change the traffic percentage from 0 to 50 and click the **SAVE** button.
+
+9. Show that traffic is split between 0.0.1 and 0.0.2 by executing curl a few times:
+
+        curl -v -H "Authorization: Bearer $(gcloud auth print-identity-token)" $SERVICE_URL/version
