@@ -116,7 +116,7 @@ _NOTE: This is not necessary as the out-of-the-box K8s manifests will pull conta
     **Name:** analyze-article-text  
     **Event:** Select "Push new tag" radio button  
     **Source/Repository:** Your Cloud Source repo (see requirements)  
-    **Source/Tag:** .*
+    **Source/Tag:** `.*`
    
    Then click "Create".
 
@@ -296,7 +296,7 @@ From the `analyze-article-text` directory:
 
         curl -v http://EXTERNAL-IP/version
 
-4. Edit the `k8s/istio/analyze-article-text.yaml` file and change the weight of v1 to `50` and the weighting of v2 to `50`.
+4. Edit the `k8s/istio/analyze-article-text.yaml` file and change the `weight` of `v1` to `50` and the `weight` of `v2` to `50`.
 
 5. Apply the changes:
 
@@ -309,16 +309,20 @@ From the `analyze-article-text` directory:
 ### TOPIC: Deploy services to Cloud Run
 
 #### Steps
-1. Download the container images locally and upload to Container Registry (replacing $PROJECT with your GCP project):
+1. Download the container images locally and upload to Container Registry (replacing `YOUR_GCP_PROJECT_NAME` appropriately):
 
+        export PROJECT=YOUR_GCP_PROJECT_NAME
         docker pull googldan/create-article-object:0.0.1
         docker pull googldan/analyze-article-text:0.0.1
         docker pull googldan/analyze-article-text:0.0.2
         docker tag googldan/create-article-object:0.0.1 eu.gcr.io/$PROJECT/create-article-object:0.0.1
         docker tag googldan/analyze-article-text:0.0.1 eu.gcr.io/$PROJECT/analyze-article-text:0.0.1
         docker tag googldan/analyze-article-text:0.0.2 eu.gcr.io/$PROJECT/analyze-article-text:0.0.2
+        docker push eu.gcr.io/$PROJECT/create-article-object:0.0.1
+        docker push eu.gcr.io/$PROJECT/analyze-article-text:0.0.1
+        docker push eu.gcr.io/$PROJECT/analyze-article-text:0.0.2
 
-2. Create the `create-article-object` service to Cloud Run:
+2. Create the `create-article-object` service to Cloud Run (replacing `$PROJECT` with your GCP project):
 
     **Deployment platform:** Cloud Run (fully managed), region _europe-west4_  
     **Service name:** create-article-object  
@@ -335,7 +339,7 @@ From the `analyze-article-text` directory:
 
 3. After service is created, click topic name on the triggers tab and then copy the topic name in the “Topic Details” screen. Be sure to remove the ``/projects/$PROJECT/topics`` prefix.
 
-4. Create the `analyze-article-text` service to Cloud Run:
+4. Create the `analyze-article-text` service to Cloud Run (replacing `$PROJECT` with your GCP project):
 
     **Deployment platform:** Cloud Run (fully managed), region _europe-west4_  
     **Service name:** analyze-article-text  
@@ -348,7 +352,7 @@ From the `analyze-article-text` directory:
 
 5. When the service is finished deploying, copy the URL that is generated for the service.
 
-6. Post an article:
+6. Post an article (replacing `$SERVICE_URL` with what was copied in the previous step):
 
         curl -v -H "Authorization: Bearer $(gcloud auth print-identity-token)" -d 'This is a test article.' $SERVICE_URL/publish
 
