@@ -14,6 +14,16 @@ The goal of the demo is to facilitate demonstration of a number of capabilities:
 1. For Cloud Run deployment, demonstrate [Events for Cloud Run](https://cloud.google.com/run/docs/quickstarts/events) and multiple service revisions.
 1. Demonstrate distributed tracing between the two microservices.
 
+The microservices can be deployed to communicate in one of two ways as show below: 
+
+- HTTP (for demonstrating ASM, Istio or Cloud Run):
+
+![HTTP communication](http.jpg "HTTP communication")
+
+- Cloud PubSub (for demonstrating Events for Cloud Run):
+
+![PubSub communication](pubsub.jpg "PubSub communication")
+
 ## Caveat
 
 This demo is not intended to demonstrate best practices for implementing microservices or optimal usage of GCP services nor should it be treated as such. It has purposely been kept reasonably simple to facilitate quick demo deployments demonstrating various GCP capabilities.
